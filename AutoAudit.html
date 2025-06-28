@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AutoAudit AI - Fraud Detection</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f9f9f9; padding: 2rem; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    h1 { color: #1a73e8; }
+    input[type="file"], textarea, button { width: 100%; margin: 1rem 0; padding: 1rem; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; }
+    button { background: #1a73e8; color: white; font-weight: bold; cursor: pointer; }
+    button:hover { background: #155ab6; }
+    #output { background: #f1f3f4; padding: 1rem; border-radius: 8px; white-space: pre-wrap; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📂 AutoAudit AI</h1>
+    <p>Upload your transaction file (.csv) and describe what to analyze.</p>
+    <input type="file" id="csvInput" accept=".csv,text/csv">
+    <textarea id="userPrompt" placeholder="Describe what you want the AI to analyze (e.g. 'List all fraud transactions over ₦500 and classify them')"></textarea>
+    <button onclick="analyzeAndSend()">Analyze & Generate Prompt</button>
+    <div id="output"></div>
+    <button onclick="emailAuditor()">✉️ Email Escalation</button>
+  </div>
+
+  <script>
+    let finalPrompt = "";
+
+    function analyzeAndSend() {
+      const file = document.getElementById('csvInput').files[0];
+      const userPrompt = document.getElementById('userPrompt').value.trim();
+
+      if (!file) return alert("Please upload a CSV file first.");
+      if (!userPrompt) return alert("Please enter a prompt for the AI.");
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          const frauds = results.data.filter(row => row.Class === "1");
+
+          if (frauds.length === 0) {
+            document.getElementById('output').innerText = "✅ No fraudulent transactions found in the dataset.";
+            return;
+          }
+
+          let summary = frauds.map((row, i) => `- ₦${parseFloat(row.Amount).toLocaleString()} at Time ${row.Time}`).join("\n");
+
+          finalPrompt = `${userPrompt}\n\nHere are the fraud entries:\n${summary}`;
+
+          document.getElementById('output').innerText = "🧠 Prompt ready for AI:\n\n" + finalPrompt;
+        },
+        error: function(err) {
+          document.getElementById('output').innerText = "❌ Error parsing CSV: " + err.message;
+        }
+      });
+    }
+
+    function emailAuditor() {
+      if (!finalPrompt) return alert("Analyze a file first!");
+      const subject = encodeURIComponent("AutoAudit AI - Fraud Escalation");
+      const body = encodeURIComponent(finalPrompt);
+      window.location.href = `mailto:umarmusamusa42@gmail.com?subject=${subject}&body=${body}`;
+    }
+  </script>
+</body>
+</html>
